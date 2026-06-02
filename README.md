@@ -1,95 +1,78 @@
 # self-evolve
 
+**Make your Claude Code agent work like a real harness — the one Hermes uses.**
+
 > an agent that can't learn from its mistakes isn't an agent. it's a very expensive grep.
 
-a cowork plugin for building agents that actually improve over time — by encoding learnings
-as persistent skills, and staying on track long enough to use them.
+A Claude Code plugin that gives your agent self-evolving harness capabilities: it learns
+from mistakes, encodes durable skills, and actually follows them across long trajectories.
+The same architecture that makes Hermes effective — applied to your local Claude Code setup.
 
-backed by actual research. not vibes.
+Backed by peer-reviewed research. Not vibes.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
 
-## the problem
+## why this exists
 
-you've probably noticed this: you spend 30 minutes in a conversation getting claude to do
-something exactly right. it figures out the right approach, gets the format correct, finds
-the edge case. great session.
+Hermes-style agents don't just run tools. They build up a persistent skill library from
+execution traces and stay on-task across long trajectories. That's what makes them
+effective over time — they compound.
 
-next session: starts from zero. no memory of what worked. you're debugging the same thing
-again.
+Out of the box, Claude Code doesn't do this. Every session starts fresh. Skills drift
+mid-conversation. You repeat yourself.
 
-there's a second, subtler problem: claude loads a skill at the start of a long task, reads
-it, says "got it" — and then quietly stops following it halfway through. not maliciously.
-just... drifts. the model's attention moves on and the skill becomes wallpaper.
+This plugin fixes both problems with two mechanisms:
 
-both of these are real, measured failure modes. not opinions.
+1. **Skill evolution** — extract learnings from conversations and persist them as
+   reusable skills (like Hermes's harness updating)
+2. **Adherence enforcement** — prevent mid-trajectory drift where the agent loads
+   instructions but quietly stops following them
 
 ---
 
 ## the research
 
-this plugin is a direct implementation of findings from:
+This plugin implements findings from:
 
-**"harness updating is not harness benefit: disentangling evolution capabilities in
-self-evolving llm agents"**
-lin et al., arXiv:[2605.30621](https://arxiv.org/abs/2605.30621), may 2026
+**"Harness Updating is Not Harness Benefit: Disentangling Evolution Capabilities in
+Self-Evolving LLM Agents"**
+Lin et al., arXiv:[2605.30621](https://arxiv.org/abs/2605.30621), May 2026
 
-the paper ran a cross-factorial experiment: every model acts as agent, every model acts
-as skill-writer (evolver), independently. three benchmarks. seven models from 9b to
-claude opus 4.6. here's what they found:
+Key findings:
 
-### finding 1: any model can write good skills
-
-the spread between the best and worst skill-writer is **at most 3.1 percentage points**
-on any benchmark. a 9b open-source model produced skills that were *procedurally
-isomorphic* to what opus 4.6 wrote — same steps, different verbosity, same outcome.
-
-**implication:** writing skills from execution traces is a pattern-extraction problem,
-not a reasoning problem. don't overthink it. extract the pattern. write the skill.
-
-### finding 2: the bottleneck is using skills, not writing them
-
-after evolution, performance is dominated by the **agent**, not the evolver. swapping
-evolvers moves the needle by ~5pp. the agent capability gap is 36pp.
-
-**implication:** invest in the task-solving agent. not the skill-writer.
-
-### finding 3: two ways weak agents fail at harness
-
-**failure mode 1 — activation failure**: qwen3-32b loads a skill in only 25% of
-trajectories. strong models: ~96%. the model *knows* the skill exists. it just fails to
-issue a clean `load_skill` call. buries it in a multi-step action. environment never
-registers it. skill never enters context.
-
-**failure mode 2 — adherence failure**: even when loaded, weak models follow the skill
-in only 14% of trajectories. and it gets worse across time — adherence decays **4x more
-steeply** for weak models than strong ones. loaded the skill at step 1. by step 20,
-winging it entirely.
-
-the paper calls this a "long-horizon instruction-following bottleneck." the model
-progressively deprioritizes the loaded skill as the trajectory unfolds. it's not that
-it misread the skill — it's that it stops caring about it.
+| Finding | Implication |
+|---------|-------------|
+| Any model can write good skills (spread: 3.1pp max) | Skill-writing is pattern extraction, not deep reasoning |
+| Performance is bottlenecked by the agent, not the evolver | Invest in following skills, not writing them |
+| Weak agents fail to activate skills (25% vs 96%) | Trigger phrases and explicit invocation matter |
+| Adherence decays 4x faster in weak models over long trajectories | Always-on drift prevention is essential |
 
 ---
 
-## what this plugin does about it
+## what's included
 
 ```
 self-evolve/
+├── CLAUDE.md                          # always-on adherence protocol
 ├── skills/
-│   ├── improve-urself/     # /improve-urself — encode learnings as skills
-│   └── reload-context/     # /reload-context — fix mid-trajectory drift
+│   ├── improve-urself/SKILL.md        # /improve-urself — encode learnings as skills
+│   └── reload-context/                # /reload-context — fix mid-trajectory drift
+│       ├── SKILL.md
 │       └── references/
-│           └── skill-standards.md  # template for writing followable skills
-└── CLAUDE.md               # always-on harness adherence instructions
+│           └── skill-standards.md     # template for writing followable skills
+└── .claude-plugin/plugin.json
 ```
+
+---
+
+## skills
 
 ### `/improve-urself [optional: topics]`
 
-maps to: **finding 1** (harness-updating is flat — any model can do this)
-
-scans the current conversation for mistakes, corrections, and patterns. checks your
-existing skills for overlap. creates a new skill or updates an existing one.
+Scans the current conversation for mistakes, corrections, and patterns. Creates or
+updates a persistent skill so the learning survives beyond this session.
 
 ```
 /improve-urself
@@ -97,74 +80,71 @@ existing skills for overlap. creates a new skill or updates an existing one.
 /improve-urself json formatting tool-use
 ```
 
-the key insight from the paper: you don't need to call a frontier model to write the
-skill. the quality of a skill is bounded by what the execution trace reveals —
-not by how smart the writer is. just run it. even small learnings compound.
+The key insight: you don't need a frontier model to write the skill. The quality is
+bounded by what the execution trace reveals — not by how smart the writer is. Even
+small learnings compound across sessions.
 
-### `/reload-context` (or `/brainwash`)
+### `/reload-context`
 
-maps to: **failure mode 2** (harness adherence decay)
+Re-reads every loaded skill and active instruction. Explicitly re-commits to fallback
+steps. Makes the active harness visible and auditable.
 
-re-reads every loaded skill and active instruction. explicitly re-commits to fallback
-steps. makes the active harness visible and auditable.
-
-call it when:
-- you notice claude improvising around instructions it should be following
-- a task is getting long and you want to reset attention
-- the output looks right-shaped but something feels off
-
-note: this is not `/brainwash` (that name implies erasure). it's a re-read and
-re-anchor. the conversation history stays intact. attention resets.
+Use it when:
+- Claude is improvising around instructions it should be following
+- A task is getting long and you want to reset attention
+- Output looks right-shaped but something feels off
 
 ### `CLAUDE.md` — always-on adherence protocol
 
-maps to: **failure mode 2** + the paper's training recommendations
-
-instead of waiting for you to notice drift, these instructions run in every session:
-
-- state relevant loaded skills before starting multi-step tasks
-- re-check alignment at sub-task transitions
-- acknowledge fallbacks before starting, not after step 1 fails
-- if improvising around a skill → stop and re-read
-
-the paper's recommendation for fixing adherence decay is training-based. for agents
-you don't train yourself, this is the next best thing: an always-on instruction that
-makes harness adherence explicit and checkable.
-
-### `skill-standards.md`
-
-a template for writing skills that actually get followed, derived from the paper's
-failure mode analysis. structured steps beat prose. explicit fallbacks beat "handle
-errors." numbered procedures are harder to skip than paragraphs.
+Runs every session without explicit invocation:
+- State relevant loaded skills before multi-step tasks
+- Re-check alignment at sub-task transitions
+- Acknowledge fallbacks upfront, not after step 1 fails
+- If improvising around a skill → stop and re-read
 
 ---
 
 ## install
 
-click the `.plugin` file in the parent directory → "save skill" → restart claude.
+### Claude Code CLI
 
-or drop `self-evolve.plugin` into your cowork plugins folder manually.
+```bash
+claude plugin add Stealthy-McStealth/self-evolve
+```
+
+### Manual
+
+Clone this repo into your Claude Code plugins directory:
+
+```bash
+git clone https://github.com/Stealthy-McStealth/self-evolve.git ~/.claude/plugins/self-evolve
+```
 
 ---
 
-## what this plugin doesn't solve
+## limitations
 
-the paper also found that **harness-benefit is non-monotonic** — mid-tier models
-benefit most from evolved skills; weak models still struggle even with perfect skills
-because they can't reliably invoke or follow them.
+- **Non-monotonic benefit**: mid-tier models benefit most from evolved skills. Very weak
+  models struggle even with perfect skills because they can't reliably invoke or follow them.
+- **Not fully automatic**: you call `/improve-urself` yourself. Fully automatic skill
+  evolution from conversation traces requires more infrastructure — that's future work.
 
-if you're running a very weak base model, this plugin will help with skill formatting
-(making skills more followable) but it won't fix the underlying capability gap.
-the paper's recommendation there: invest in the task-solving agent, not the harness.
+---
 
-also: this plugin doesn't auto-evolve. you have to call `/improve-urself` yourself.
-fully automatic skill evolution from conversation traces is a workflow the paper
-describes but which requires more infrastructure than a cowork plugin. that's a future
-thing.
+## contributing
+
+PRs welcome. If you've found a pattern that makes skills more followable or adherence
+more durable, open an issue or submit a skill.
 
 ---
 
 ## related
 
-- paper: https://arxiv.org/abs/2605.30621
-- code from the paper: https://github.com/A-EVO-Lab/a-evolve/tree/release/harness-evolution
+- [Paper: Harness Updating is Not Harness Benefit](https://arxiv.org/abs/2605.30621) — the research this implements
+- [A-EVO-Lab/a-evolve](https://github.com/A-EVO-Lab/a-evolve/tree/release/harness-evolution) — code from the paper
+
+---
+
+## license
+
+[MIT](LICENSE)

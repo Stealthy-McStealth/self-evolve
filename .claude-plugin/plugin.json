@@ -1,9 +1,15 @@
 {
   "name": "self-evolve",
-  "version": "0.1.0",
-  "description": "harness self-evolution for claude agents — extract learnings, encode them as skills, stay on track. backed by research.",
+  "version": "1.0.0",
+  "description": "Make your Claude Code agent work like a real harness (Hermes). Self-evolving skills + drift prevention. Research-backed.",
   "author": {
-    "name": "Stealthy-McStealth"
+    "name": "Stealthy-McStealth",
+    "url": "https://github.com/Stealthy-McStealth"
   },
-  "keywords": ["agent", "skills", "memory", "self-improvement", "harness"]
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Stealthy-McStealth/self-evolve"
+  },
+  "license": "MIT",
+  "keywords": ["claude-code", "claude", "ai-agents", "hermes", "self-evolving-agents", "harness", "llm-agents", "skills", "plugin"]
 }
