@@ -1,0 +1,9 @@
+{
+  "name": "self-evolve",
+  "version": "0.1.0",
+  "description": "harness self-evolution for claude agents — extract learnings, encode them as skills, stay on track. backed by research.",
+  "author": {
+    "name": "Stealthy-McStealth"
+  },
+  "keywords": ["agent", "skills", "memory", "self-improvement", "harness"]
+}
